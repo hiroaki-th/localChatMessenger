@@ -10,6 +10,12 @@ import (
 
 func main() {
 
+	//get username
+	username := "client"
+	if len(os.Args) > 1 {
+		username = os.Args[1]
+	}
+
 	// create connection to server
 	conn, err := net.Dial("unix", "../server/tmp_file")
 	if err != nil {
@@ -34,7 +40,7 @@ func main() {
 					os.Exit(1)
 				}
 
-				fmt.Printf("server:   %s\n", string(buf))
+				fmt.Println(string(buf))
 			}
 		}()
 
@@ -52,6 +58,6 @@ func main() {
 			return
 		}
 
-		conn.Write([]byte(text))
+		conn.Write([]byte(username + ":  " + text))
 	}
 }
