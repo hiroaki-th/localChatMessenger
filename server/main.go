@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"net"
 	"os"
@@ -28,6 +27,9 @@ func main() {
 	// manage connection
 	connections := make([]net.Conn, 0)
 
+	// massage channel
+	ch := make(chan string)
+
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -42,27 +44,25 @@ func main() {
 				buff := make([]byte, 64)
 				conn.Read(buff)
 				if buff[0] != 0 {
-					fmt.Printf("client:   %s\n", string(buff))
+					fmt.Println(string(buff))
+					ch <- string(buff)
 				}
 			}
 		}()
 
-		// write message to client
-		reader := bufio.NewReader(os.Stdin)
-		text, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Printf("cannot read what you input\n")
-		}
-		fmt.Printf("\n")
-
-		// send message to client
-		if len(connections) > 0 {
-			for _, c := range connections {
-				_, err = c.Write([]byte(text))
-				if err != nil {
-					fmt.Printf("cannot send message to client: %s\n", err)
+		go func() {
+			for {
+				message := <-ch
+				// send message to client
+				if len(connections) > 0 {
+					for _, c := range connections {
+						_, err = c.Write([]byte(message))
+						if err != nil {
+							continue
+						}
+					}
 				}
 			}
-		}
+		}()
 	}
 }
