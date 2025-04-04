@@ -25,31 +25,30 @@ func main() {
 	fmt.Printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 	fmt.Printf("\n")
 
-	conn, err := listener.Accept()
+	// manage connection
+	connections := make([]net.Conn, 0)
+
 	for {
-		if conn == nil {
-			conn, _ = listener.Accept()
-		}
-
-		// wait for connection from client
+		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Printf("cannot connect to a client: %s\n", err)
-			os.Exit(1)
+			continue
 		}
 
-		// read from client
-		buff := make([]byte, 64)
-		_, err := conn.Read(buff)
-		if err != nil {
-			fmt.Printf("cannot read: %s\n", err)
-			conn.Close()
-		}
+		connections = append(connections, conn)
 
-		fmt.Printf("client:   %s\n", string(buff))
+		go func() {
+			for {
+				// read from client
+				buff := make([]byte, 64)
+				conn.Read(buff)
+				if buff[0] != 0 {
+					fmt.Printf("client:   %s\n", string(buff))
+				}
+			}
+		}()
 
 		// write message to client
 		reader := bufio.NewReader(os.Stdin)
-		fmt.Printf("you:   ")
 		text, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Printf("cannot read what you input\n")
@@ -57,9 +56,13 @@ func main() {
 		fmt.Printf("\n")
 
 		// send message to client
-		_, err = conn.Write([]byte(text))
-		if err != nil {
-			fmt.Printf("cannot send message to client: %s\n", err)
+		if len(connections) > 0 {
+			for _, c := range connections {
+				_, err = c.Write([]byte(text))
+				if err != nil {
+					fmt.Printf("cannot send message to client: %s\n", err)
+				}
+			}
 		}
 	}
 }

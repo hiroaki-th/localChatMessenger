@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -22,24 +23,35 @@ func main() {
 
 	// write message to serer
 	for {
+
+		go func() {
+			for {
+				// receive response from server
+				buf := make([]byte, 64)
+				_, err = conn.Read(buf)
+				if err != nil {
+					fmt.Printf("cannot read response: %s", err)
+					os.Exit(1)
+				}
+
+				fmt.Printf("server:   %s\n", string(buf))
+			}
+		}()
+
 		reader := bufio.NewReader(os.Stdin)
-		fmt.Printf("you:   ")
 		text, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Printf("cannot read what you input\n")
 		}
 		fmt.Printf("\n")
 
-		conn.Write([]byte(text))
-
-		// receive response from server
-		buf := make([]byte, 64)
-		_, err = conn.Read(buf)
-		if err != nil {
-			fmt.Printf("cannot read response: %s", err)
-			os.Exit(1)
+		trimString := strings.TrimSpace(text)
+		if trimString == "exit" {
+			fmt.Println("connection closed")
+			os.Exit(0)
+			return
 		}
 
-		fmt.Printf("server:   %s\n", string(buf))
+		conn.Write([]byte(text))
 	}
 }
